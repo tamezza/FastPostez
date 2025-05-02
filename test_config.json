@@ -1,0 +1,19 @@
+{
+    "ntuple": {
+        "tree_name": "AnalysisMiniTree"
+    },
+    "analysis": {
+        "dsids": [700353],
+        "years": [],
+        "metadata": "data/metadata.txt",
+        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p30", "FlatMassQCDEff_0p37",
+                "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
+                "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],
+
+        "min_mass": 40,
+        "max_mass": 160,
+        "min_pt": 200,
+        "max_pt": 500,
+        "min_dphi": 1.57079632679
+    }
+}
