@@ -63,17 +63,17 @@ namespace xbbycalib {
     if (is_data) spdlog::info("Creating RDataFrame for data sample for year: {}", sample_label);
     else         spdlog::info("Creating RDataFrame for MC sample with dsid: {}",  sample_label);
 
-    const auto input_files = input_handler::prepare_input_files(input_folder_, sample_label, is_data);
-    auto chain_ptr = input_handler::create_safe_chain(input_files, config_.ntuple.tree_name);
+    auto input_handler = InputHandler(input_folder_, config_.ntuple.tree_name, sample_label, is_data, config_.analysis.metadata);
+    auto chain_ptr = input_handler.get_chain();
 
     ROOT::RDataFrame df(*chain_ptr);
     ROOT::RDF::Experimental::AddProgressBar(df);
+    df_ = df;
 
-    df_ = weights::define_event_weights(df, config_, sample_label, input_files, is_data);
     define_physics_variables();
     select_Z_candidate();
     get_dhbb();
-    GN2XHandler gn2x_handler_(config_.ntuple.flatmass);
+    GN2XHandler gn2x_handler_(config_.analysis.flatmass);
 
     for (auto wp : config_.analysis.wps) {
       auto dhbb_selection_code = gn2x_handler_.make_selection_code(wp, "zcand_gn2x", "zcand_m");
@@ -199,12 +199,27 @@ namespace xbbycalib {
     auto h_pqcd_zcand = df.Histo1D({"h_pqcd_zcand", "log(pqcd);log(pqcd);Events", 50, 0, 10},
                                     "zcand_log_pqcd", "total_weight");
 
+    auto h_phbb_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_phbb_zcand_sidebands", "log(phbb);log(phbb);Events", 50, 0, 10},
+                                    "zcand_log_phbb", "total_weight");
+
+    auto h_phcc_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_phcc_zcand_sidebands", "log(phcc);log(phcc);Events", 50, 0, 20},
+                                    "zcand_log_phcc", "total_weight");
+
+    auto h_ptop_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_ptop_zcand_sidebands", "log(ptop);log(ptop);Events", 50, 0, 12},
+                                    "zcand_log_ptop", "total_weight");
+
+    auto h_pqcd_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_pqcd_zcand_sidebands", "log(pqcd);log(pqcd);Events", 50, 0, 10},
+                                    "zcand_log_pqcd", "total_weight");
 
     h_m_zcand->Write();
     h_phbb_zcand->Write();
     h_phcc_zcand->Write();
     h_ptop_zcand->Write();
     h_pqcd_zcand->Write();
+    h_phbb_zcand_sidebands->Write();
+    h_phcc_zcand_sidebands->Write();
+    h_ptop_zcand_sidebands->Write();
+    h_pqcd_zcand_sidebands->Write();
     h_gn2x->Write();
     h_gn2x_ftop0->Write();
 

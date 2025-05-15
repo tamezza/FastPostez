@@ -14,7 +14,6 @@
 #include <TObject.h>
 #include <TCollection.h>
 #include <ROOT/RVec.hxx>
-#include "config.h"
 #include "weights.h"
 
 namespace weights {
@@ -128,12 +127,12 @@ namespace weights {
     return total_weight;
   }
 
-  ROOT::RDF::RNode define_event_weights(ROOT::RDF::RNode df, const config::Config& config, int sample_label,
+  ROOT::RDF::RNode define_event_weights(ROOT::RDF::RNode df, const std::string& metadata, int sample_label,
                                         const std::vector<std::string>& input_files, bool is_data)
   {
     if (is_data) return df.Define("total_weight", "1");
 
-    const double cross_section = weights::get_xcross(sample_label, config.analysis.metadata);
+    const double cross_section = weights::get_xcross(sample_label, metadata);
     const double sum_weights = weights::get_sum_w(input_files);
     const std::string weight_expr = weights::getWeightExpr(cross_section, sum_weights, "run2", df);
 
