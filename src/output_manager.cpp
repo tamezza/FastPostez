@@ -41,5 +41,6 @@ void output_manager::set_logger(const std::string& output_folder)
   auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file, true);
 
   auto logger_ptr = std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
+  logger_ptr->set_pattern("[%Y-%m-%d %H:%M:%S] [%^%l%$] %v");
   spdlog::set_default_logger(logger_ptr);
 }

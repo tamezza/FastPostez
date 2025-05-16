@@ -1,2 +1,2 @@
-cppcheck --enable=all --std=c++17 --suppress=missingIncludeSystem src
+cppcheck --enable=all --std=c++20 --suppress=missingIncludeSystem src
 

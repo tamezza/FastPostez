@@ -3,10 +3,11 @@
 #include <sstream>
 #include <fstream>
 #include <map>
+#include <ranges>
 #include <spdlog/spdlog.h>
 #include "gn2x.h"
 
-GN2XHandler::GN2XHandler(const std::string wps_cuts_filename)
+GN2XHandler::GN2XHandler(const std::string& wps_cuts_filename)
 {
   load_flatmass_cuts_CSV(wps_cuts_filename);
 }
@@ -84,7 +85,7 @@ std::string GN2XHandler::make_selection_code(const std::string& wp_name,
 {
   auto cuts = all_cuts_[wp_name];
   std::string selection_code = "if (" + mass_var + " < 40) return false;\n";
-  for (const auto cut : cuts) {
+  for (const auto& cut : cuts) {
     selection_code += "else if (" + mass_var + " >= " + std::to_string(cut.min_mass)
                     + " && "      + mass_var + " < "  + std::to_string(cut.max_mass)
                     + ") {return " + gn2x_var + " > " + std::to_string(cut.cut)
@@ -96,9 +97,6 @@ std::string GN2XHandler::make_selection_code(const std::string& wp_name,
 
 std::vector<std::string> GN2XHandler::get_wps()
 {
-  std::vector<std::string> wps;
-  for (const auto wp : all_cuts_) {
-    wps.push_back(wp.first);
-  }
-  return wps;
+  auto keys = all_cuts_ | std::views::transform([](const auto& wp) { return wp.first; });
+  return std::vector<std::string>(keys.begin(), keys.end());
 }

@@ -1,16 +1,18 @@
 #include <string>
 #include <cxxopts.hpp>
+
 #include "xbby_calib.h"
+#include "config.h"
 
 int main(int argc, char* argv[])
 {
-  cxxopts::Options options("run_analysis", "Create histograms for Zbb+gamma calibration");
+  cxxopts::Options options("run_analysis", "Create histograms and ntuples for Zbb+gamma calibration");
 
   options.add_options()
     ("c,config", "Path to JSON config file", cxxopts::value<std::string>())
     ("i,input", "Input folder name", cxxopts::value<std::string>())
     ("o,output", "Output folder name", cxxopts::value<std::string>()->default_value("output"))
-    ("m,multi-threading", "Enable multi-threading", cxxopts::value<bool>()->default_value("true"))
+    ("n,nthreads", "Number of threads", cxxopts::value<int>()->default_value("1"))
     ("h,help", "Print usage");
 
   auto result = options.parse(argc, argv);
@@ -28,9 +30,11 @@ int main(int argc, char* argv[])
 
   const auto config_file = result["config"].as<std::string>();
   const auto input_folder = result["input"].as<std::string>();
-  const auto multi_threading = result["multi-threading"].as<bool>();
+  const auto n_threads = result["nthreads"].as<int>();
   auto output_folder = result["output"].as<std::string>();
-  auto analysis = xbbycalib::Analysis(config_file, input_folder, output_folder, multi_threading);
+
+  const auto config = config::load_config(config_file);
+  auto analysis = xbbycalib::Analysis(config, input_folder, output_folder, n_threads);
   analysis.run();
 
   return 0;

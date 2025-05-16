@@ -19,7 +19,7 @@ class InputHandler {
     std::unique_ptr<TChain> get_chain();
   private:
     std::map<std::string, std::vector<std::string>> make_file_list(const std::string& pattern);
-    std::vector<std::string> make_merged_file_list(std::map<std::string, std::vector<std::string>> input_folders_files);
+    std::vector<std::string> make_merged_file_list(const std::map<std::string, std::vector<std::string>>& input_folders_files);
     void create_merged_file(const std::string& folder, const std::vector<std::string>& files);
     std::unique_ptr<TChain> create_safe_chain(const std::vector<std::string>& file_list);
 };

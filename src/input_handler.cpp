@@ -6,6 +6,7 @@
 #include <regex>
 #include <map>
 #include <algorithm>
+#include <iterator>
 #include <spdlog/spdlog.h>
 #include <TChain.h>
 #include <TFile.h>
@@ -35,17 +36,18 @@ InputHandler::InputHandler(const std::string& input_folder,
 
 std::unique_ptr<TChain> InputHandler::get_chain()
 {
-  std::string label = std::to_string(sample_label_);
-  std::string pattern = is_data_ ? "grp" + label : label;
-  const auto input_folders_files = InputHandler::make_file_list(pattern);
+  const std::string pattern = is_data_ ? "grp" + std::to_string(sample_label_) : std::to_string(sample_label_);
+  const auto input_folders_files = make_file_list(pattern);
 
   all_input_files_.clear();
   for (const auto& [folder, files] : input_folders_files) {
-    for (const auto& file : input_folders_files.at(folder)) {
-      if (file.find(merged_file_name_) == std::string::npos) {
-        all_input_files_.emplace_back(file);
+    std::copy_if(
+      files.begin(), files.end(),
+      std::back_inserter(all_input_files_),
+      [this](const std::string& file) {
+        return file.find(merged_file_name_) == std::string::npos;
       }
-    }
+    );
   }
 
   const auto merged_files = make_merged_file_list(input_folders_files);
@@ -57,25 +59,22 @@ std::map<std::string, std::vector<std::string>> InputHandler::make_file_list(con
   std::map<std::string, std::vector<std::string>> folder_file_map;
   std::regex folder_pattern("user.*" + pattern + ".*");
 
-  try {
-    for (const auto& folder : fs::directory_iterator(input_folder_)) {
-      const std::string folder_name = folder.path().filename().string();
-      if(std::regex_search(folder_name, folder_pattern)) {
-        std::vector<std::string> file_list;
-        for (const auto& file : fs::directory_iterator(folder.path())) {
-          file_list.push_back(file.path().string());
-        }
-        folder_file_map[folder_name] = std::move(file_list);
-      }
+  for (const auto& folder : fs::directory_iterator(input_folder_)) {
+    const std::string folder_name = folder.path().filename().string();
+    if(std::regex_search(folder_name, folder_pattern)) {
+      std::vector<std::string> file_list;
+      std::transform(fs::directory_iterator(folder.path()),
+                     fs::directory_iterator{},
+                     std::back_inserter(file_list),
+                     [](const auto& file) { return file.path().string(); });
+      folder_file_map[folder_name] = std::move(file_list);
     }
-  } catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
   }
 
   return folder_file_map;
 }
 
-std::vector<std::string> InputHandler::make_merged_file_list(std::map<std::string, std::vector<std::string>> input_folders_files)
+std::vector<std::string> InputHandler::make_merged_file_list(const std::map<std::string, std::vector<std::string>>& input_folders_files)
 {
   std::vector<std::string> input_files;
   for (const auto& [folder, files] : input_folders_files) {

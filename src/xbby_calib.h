@@ -11,15 +11,15 @@ namespace xbbycalib {
     private:
       const std::string input_folder_;
       std::string output_folder_;
-      bool multi_threading_;
+      int n_threads_;
       config::Config config_;
       std::optional<ROOT::RDF::RNode> df_;
 
     public:
-      Analysis(const std::string config_file,
-               const std::string input_folder,
+      Analysis(const config::Config& config,
+               const std::string& input_folder,
                std::string output_folder,
-               bool multi_threading);
+               int n_threads);
       void run();
 
     private:

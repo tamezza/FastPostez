@@ -16,7 +16,7 @@ class GN2XHandler {
   private:
     std::map<std::string, std::vector<GN2XCut>> all_cuts_;
   public:
-    GN2XHandler(const std::string wps_cuts_filename);
+    explicit GN2XHandler(const std::string& wps_cuts_filename);
     std::string make_selection_code(const std::string& wp_name,
                                     const std::string& gn2x_var,
                                     const std::string& mass_var);

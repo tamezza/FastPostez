@@ -19,30 +19,26 @@
 #include "gn2x.h"
 
 namespace xbbycalib {
-  Analysis::Analysis(const std::string config_file,
-                     const std::string input_folder,
+  Analysis::Analysis(const config::Config& config,
+                     const std::string& input_folder,
                      std::string output_folder,
-                     bool multi_threading)
-    : input_folder_(input_folder),
+                     int n_threads)
+    : config_(config),
+      input_folder_(input_folder),
       output_folder_(output_folder),
-      multi_threading_(multi_threading)
+      n_threads_(n_threads)
   {
-    spdlog::info("Initializing analysis...");
-    spdlog::info("Config file: {}", config_file);
-    spdlog::info("Input folder: {}", input_folder);
-    spdlog::info("Output folder: {}", output_folder);
-
-    spdlog::info("Loading config from {}", config_file);
-    config_ = config::load_config(config_file);
   }
 
   void Analysis::run()
   {
-    output_folder_ = output_manager::create_output_folder(output_folder_);
+  output_folder_ = output_manager::create_output_folder(output_folder_);
     output_manager::set_logger(output_folder_);
-    if (multi_threading_) {
-      ROOT::EnableImplicitMT();
-      spdlog::info("Multi-threading enabled.");
+
+    spdlog::info("Running analysis...");
+    if (n_threads_ > 1) {
+      ROOT::EnableImplicitMT(n_threads_);
+      spdlog::info("Multi-threading enabled using: {} threads.", n_threads_);
     }
     else {
       spdlog::info("Multi-threading disabled, RDataFrame will run on a single core.");
@@ -75,7 +71,7 @@ namespace xbbycalib {
     get_dhbb();
     GN2XHandler gn2x_handler_(config_.analysis.flatmass);
 
-    for (auto wp : config_.analysis.wps) {
+    for (const auto& wp : config_.analysis.wps) {
       auto dhbb_selection_code = gn2x_handler_.make_selection_code(wp, "zcand_gn2x", "zcand_m");
       std::string pass_dhbb = "pass_dhbb_" + wp;
       df_ = df_.value()
@@ -85,6 +81,11 @@ namespace xbbycalib {
     const std::string output_file_name = output_folder_ + "/histograms/hists_"
                                                         + std::to_string(sample_label) + ".root";
     save_histograms(output_file_name);
+
+    const std::string output_ntuple_name = output_folder_ + "/ntuples/ntuples_"
+                                                        + std::to_string(sample_label) + ".root";
+
+    df_.value().Snapshot("tree", output_ntuple_name, {"zcand_m", "zcand_pt", "zcand_log_phbb", "zcand_log_phcc", "zcand_log_ptop", "zcand_log_pqcd"});
   }
 
   void Analysis::define_physics_variables()
@@ -182,6 +183,8 @@ namespace xbbycalib {
     auto& df = df_.value();
     auto h_m_zcand = df.Histo1D({"h_m_zcand", "Z candidate mass;m [GeV];Events", 24, 40, 160},
                                   "zcand_m", "total_weight");
+    auto h_pt_zcand = df.Histo1D({"h_pt_zcand", "Z candidate p_{T};m [GeV];Events", 25, 200, 500},
+                                  "zcand_pt", "total_weight");
     auto h_gn2x = df.Histo1D({"h_m_gn2x", "DXbb;;Events", 20, -10, 10},
                                "zcand_gn2x", "total_weight");
     auto h_gn2x_ftop0 = df.Histo1D({"h_m_gn2x_ftop0", "DXbb;;Events", 20, -10, 10},
@@ -212,6 +215,7 @@ namespace xbbycalib {
                                     "zcand_log_pqcd", "total_weight");
 
     h_m_zcand->Write();
+    h_pt_zcand->Write();
     h_phbb_zcand->Write();
     h_phcc_zcand->Write();
     h_ptop_zcand->Write();
