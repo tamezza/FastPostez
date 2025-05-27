@@ -1,4 +1,6 @@
 #include <string>
+#include <map>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <stdexcept>
@@ -21,13 +23,17 @@ config::Config config::load_config(const std::string& config_file_name)
   }
 
   try {
-    config.ntuple.tree_name  = j.at("ntuple").at("tree_name").get<std::string>();
+    config.ntuple.tree_name = j.at("ntuple").at("tree_name").get<std::string>();
 
-    config.analysis.dsids    = j.at("analysis").at("dsids").get<std::vector<int>>();
-    config.analysis.years    = j.at("analysis").at("years").get<std::vector<int>>();
-    config.analysis.metadata = j.at("analysis").at("metadata").get<std::string>();
-    config.analysis.flatmass = j.at("analysis").at("flatmass").get<std::string>();
-    config.analysis.wps      = j.at("analysis").at("wps").get<std::vector<std::string>>();
+    config.analysis.dsids       = j.at("analysis").at("dsids").get<std::vector<int>>();
+    config.analysis.years       = j.at("analysis").at("years").get<std::vector<int>>();
+    for (const auto& [year_str, triggers] : j.at("analysis").at("trigger_map").items()) {
+      int year = std::stoi(year_str);
+      config.analysis.trigger_map[year] = triggers.get<std::vector<std::string>>();
+    }
+    config.analysis.metadata    = j.at("analysis").at("metadata").get<std::string>();
+    config.analysis.flatmass    = j.at("analysis").at("flatmass").get<std::string>();
+    config.analysis.wps         = j.at("analysis").at("wps").get<std::vector<std::string>>();
 
     config.analysis.min_mass = j.at("analysis").at("min_mass").get<float>();
     config.analysis.max_mass = j.at("analysis").at("max_mass").get<float>();

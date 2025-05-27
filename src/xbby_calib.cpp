@@ -6,9 +6,11 @@
 #include <stdexcept>
 #include <cstdio>
 #include <map>
+#include <algorithm>
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RDFHelpers.hxx>
 #include <TFile.h>
+#include <TF1.h>
 #include <TChain.h>
 #include <spdlog/spdlog.h>
 #include "output_manager.h"
@@ -66,6 +68,7 @@ namespace xbbycalib {
     ROOT::RDF::Experimental::AddProgressBar(df);
     df_ = df;
 
+    apply_triggers();
     define_physics_variables();
     select_Z_candidate();
     get_dhbb();
@@ -74,18 +77,54 @@ namespace xbbycalib {
     for (const auto& wp : config_.analysis.wps) {
       auto dhbb_selection_code = gn2x_handler_.make_selection_code(wp, "zcand_gn2x", "zcand_m");
       std::string pass_dhbb = "pass_dhbb_" + wp;
-      df_ = df_.value()
-               .Define(pass_dhbb, dhbb_selection_code)
-               .Define("zcand_m_" + pass_dhbb, "zcand_m * " + pass_dhbb);
+      df_ = df_.value().Define(pass_dhbb, dhbb_selection_code);
     }
     const std::string output_file_name = output_folder_ + "/histograms/hists_"
                                                         + std::to_string(sample_label) + ".root";
-    save_histograms(output_file_name);
+
+    if (sample_label >= 364542 && sample_label <= 364547) {
+      //df_ = df_.value().Filter("abs(generatorWeight_NOSYS) < 100");
+      df_ = df_.value().Redefine("total_weight", "total_weight * (1.0173 - 0.0006*zcand_m - 0.0004*zcand_pt)");
+      df_ = df_.value().Redefine("total_weight", "zcand_log_phbb <= 0.2 ? total_weight * (1.3576 - 0.0009*zcand_m + 0.2485*zcand_log_phbb) : total_weight");
+
+      /*std::unique_ptr<TFile> fit_file(TFile::Open("output_phbb_fit.root", "READ"));
+      auto fit_func = static_cast<TF1*>(fit_file->Get("func"));
+      auto get_phbb_fit = [&](double total_weight, float zcand_log_phbb) -> double {
+        return fit_func->Eval(zcand_log_phbb) * total_weight;
+      };
+      df_ = df_.value().Redefine("total_weight", get_phbb_fit, {"total_weight", "zcand_log_phbb"});*/
+    }
+    save_histograms(output_file_name, "total_weight");
 
     const std::string output_ntuple_name = output_folder_ + "/ntuples/ntuples_"
                                                         + std::to_string(sample_label) + ".root";
 
-    df_.value().Snapshot("tree", output_ntuple_name, {"zcand_m", "zcand_pt", "zcand_log_phbb", "zcand_log_phcc", "zcand_log_ptop", "zcand_log_pqcd"});
+    std::vector<std::string> output_variables = {"zcand_m", "zcand_pt", "total_weight", "zcand_log_phbb", "zcand_log_phcc", "zcand_log_ptop", "zcand_log_pqcd"};
+    df_.value().Snapshot("tree", output_ntuple_name, output_variables);
+  }
+
+  void Analysis::apply_triggers()
+  {
+    // Build trigger condition expression
+    std::string trigger_expr;
+
+    for (const auto& [year, triggers] : config_.analysis.trigger_map) {
+      std::string condition = "(";
+      for (size_t i = 0; i < triggers.size(); ++i) {
+        std::string trigger_name = "trigPassed_" + triggers[i];
+        df_ = df_.value().DefaultValueFor(trigger_name, false);
+        condition += trigger_name;
+        if (i < triggers.size() - 1) condition += " || ";
+      }
+      condition += ")";
+      trigger_expr += "(dataTakingYear == " + std::to_string(year) + " && " + condition + ") || ";
+    }
+
+    // Remove the extra ||
+    trigger_expr = trigger_expr.substr(0, trigger_expr.size() - 4);
+
+    spdlog::info("Appplying trigger selection : {}", trigger_expr);
+    df_ = df_.value().Filter(trigger_expr);
   }
 
   void Analysis::define_physics_variables()
@@ -132,6 +171,12 @@ namespace xbbycalib {
         }) > config_.analysis.min_dphi;
     };
 
+    //Photon
+    df_ = df_.value()
+             .Filter("ph_baselineSelection_Tight_FixedCutTight_NOSYS[0]")
+             .Filter("ph_passesOR_NOSYS[0]")
+             .Filter("ph_pt > 175");
+
     // Apply selection masks and define Z candidate variables
     df_ = df_.value()
              .Define("zcand_m_pt_mask", zcand_m_pt_mask, {"ljet_m", "ljet_pt"})
@@ -171,7 +216,7 @@ namespace xbbycalib {
                     {"zcand_phbb", "zcand_phcc", "zcand_ptop", "zcand_pqcd"});
   }
 
-  void Analysis::save_histograms(const std::string& output_file_name)
+  void Analysis::save_histograms(const std::string& output_file_name, const std::string& weight)
   {
     std::unique_ptr<TFile> outFile(TFile::Open(output_file_name.c_str(), "RECREATE"));
     if (!outFile || outFile->IsZombie()) {
@@ -182,57 +227,63 @@ namespace xbbycalib {
 
     auto& df = df_.value();
     auto h_m_zcand = df.Histo1D({"h_m_zcand", "Z candidate mass;m [GeV];Events", 24, 40, 160},
-                                  "zcand_m", "total_weight");
+                                  "zcand_m", weight);
     auto h_pt_zcand = df.Histo1D({"h_pt_zcand", "Z candidate p_{T};m [GeV];Events", 25, 200, 500},
-                                  "zcand_pt", "total_weight");
-    auto h_gn2x = df.Histo1D({"h_m_gn2x", "DXbb;;Events", 20, -10, 10},
-                               "zcand_gn2x", "total_weight");
-    auto h_gn2x_ftop0 = df.Histo1D({"h_m_gn2x_ftop0", "DXbb;;Events", 20, -10, 10},
-                                     "zcand_gn2x_ftop0", "total_weight");
+                                  "zcand_pt", weight);
+    auto h_m_pt_zcand = df.Histo2D({"h_m_pt_zcand", "Z candidate mass and p_{T}", 24, 40, 160, 25, 200, 500},
+                                   "zcand_m", "zcand_pt", weight);
+    auto h_gn2x = df.Histo1D({"h_gn2x", "DXbb;;Events", 25, -9, 9},
+                               "zcand_gn2x", weight);
+    auto h_gn2x_ftop0 = df.Histo1D({"h_gn2x_ftop0", "DXbb;;Events", 25, -9, 9},
+                                     "zcand_gn2x_ftop0", weight);
 
-    auto h_phbb_zcand = df.Histo1D({"h_phbb_zcand", "log(phbb);log(phbb);Events", 50, 0, 10},
-                                    "zcand_log_phbb", "total_weight");
+    auto h_phbb_zcand = df.Histo1D({"h_phbb_zcand", "-log(phbb);-log(phbb);Events", 20, 0, 0.2},
+                                    "zcand_log_phbb", weight);
 
-    auto h_phcc_zcand = df.Histo1D({"h_phcc_zcand", "log(phcc);log(phcc);Events", 50, 0, 20},
-                                    "zcand_log_phcc", "total_weight");
+    auto h_phbb_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_phbb_zcand_sidebands", "-log(phbb);-log(phbb);Events", 20, 0, 0.2},
+                                    "zcand_log_phbb", weight);
 
-    auto h_ptop_zcand = df.Histo1D({"h_ptop_zcand", "log(ptop);log(ptop);Events", 50, 0, 12},
-                                    "zcand_log_ptop", "total_weight");
+    auto h_phcc_zcand = df.Histo1D({"h_phcc_zcand", "-log(phcc);-log(phcc);Events", 25, 0, 17},
+                                    "zcand_log_phcc", weight);
 
-    auto h_pqcd_zcand = df.Histo1D({"h_pqcd_zcand", "log(pqcd);log(pqcd);Events", 50, 0, 10},
-                                    "zcand_log_pqcd", "total_weight");
+    auto h_ptop_zcand = df.Histo1D({"h_ptop_zcand", "-log(ptop);-log(ptop);Events", 25, 0, 11},
+                                    "zcand_log_ptop", weight);
 
-    auto h_phbb_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_phbb_zcand_sidebands", "log(phbb);log(phbb);Events", 50, 0, 10},
-                                    "zcand_log_phbb", "total_weight");
+    auto h_pqcd_zcand = df.Histo1D({"h_pqcd_zcand", "-log(pqcd);-log(pqcd);Events", 25, 0, 8},
+                                    "zcand_log_pqcd", weight);
 
-    auto h_phcc_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_phcc_zcand_sidebands", "log(phcc);log(phcc);Events", 50, 0, 20},
-                                    "zcand_log_phcc", "total_weight");
-
-    auto h_ptop_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_ptop_zcand_sidebands", "log(ptop);log(ptop);Events", 50, 0, 12},
-                                    "zcand_log_ptop", "total_weight");
-
-    auto h_pqcd_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_pqcd_zcand_sidebands", "log(pqcd);log(pqcd);Events", 50, 0, 10},
-                                    "zcand_log_pqcd", "total_weight");
-
+    auto h_m_phbb_zcand = df.Histo2D({"h_m_phbb_zcand", "Z candidate mass and p_{T}", 24, 40, 160, 24, 0, 0.48},
+                                   "zcand_m", "zcand_log_phbb", weight);
     h_m_zcand->Write();
     h_pt_zcand->Write();
+    h_m_pt_zcand->Write();
     h_phbb_zcand->Write();
+    h_phbb_zcand_sidebands->Write();
     h_phcc_zcand->Write();
     h_ptop_zcand->Write();
     h_pqcd_zcand->Write();
-    h_phbb_zcand_sidebands->Write();
-    h_phcc_zcand_sidebands->Write();
-    h_ptop_zcand_sidebands->Write();
-    h_pqcd_zcand_sidebands->Write();
     h_gn2x->Write();
     h_gn2x_ftop0->Write();
+    h_m_phbb_zcand->Write();
 
     for (auto wp : config_.analysis.wps) {
-      std::string zcand_pass_dhbb = "zcand_m_pass_dhbb_" + wp;
+      std::string pass_dhbb = "pass_dhbb_" + wp;
       std::string histo_name = "h_m_zcand_cut_" + wp;
-      auto h_m_zcand_cut = df.Histo1D({histo_name.c_str(), "Z candidate mass;m [GeV];Events", 24, 40, 160},
-                                        zcand_pass_dhbb.c_str(), "total_weight");
+      std::string histo_name_phbb = "h_phbb_zcand_cut_" + wp;
+      std::string histo_name_phcc = "h_phcc_zcand_cut_" + wp;
+      std::string histo_name_ptop = "h_ptop_zcand_cut_" + wp;
+      std::string histo_name_pqcd = "h_pqcd_zcand_cut_" + wp;
+      auto df_cut = df.Filter(pass_dhbb);
+      auto h_m_zcand_cut = df_cut.Histo1D({histo_name.c_str(), "Z candidate mass;m [GeV];Events", 24, 40, 160}, "zcand_m", weight);
+      auto h_phbb_zcand_cut = df_cut.Histo1D({histo_name_phbb.c_str(), "-log(phbb);-log(phbb);Events", 20, 0, 0.2}, "zcand_log_phbb", weight);
+      auto h_phcc_zcand_cut = df_cut.Histo1D({histo_name_phcc.c_str(), "-log(phcc);-log(phcc);Events", 20, 0, 17}, "zcand_log_phcc", weight);
+      auto h_ptop_zcand_cut = df_cut.Histo1D({histo_name_ptop.c_str(), "-log(ptop);-log(ptop);Events", 20, 0, 11}, "zcand_log_ptop", weight);
+      auto h_pqcd_zcand_cut = df_cut.Histo1D({histo_name_pqcd.c_str(), "-log(pqcd);-log(pqcd);Events", 20, 0, 8}, "zcand_log_pqcd", weight);
       h_m_zcand_cut->Write();
+      h_phbb_zcand_cut->Write();
+      h_phcc_zcand_cut->Write();
+      h_ptop_zcand_cut->Write();
+      h_pqcd_zcand_cut->Write();
     }
 
     spdlog::info("Successfully wrote histograms to output file");
