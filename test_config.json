@@ -3,11 +3,17 @@
         "tree_name": "AnalysisMiniTree"
     },
     "analysis": {
-        "dsids": [700353],
+        "dsids": [364542],
         "years": [],
+        "trigger_map": {
+            "2015": ["HLT_g120_loose"],
+            "2016": ["HLT_g140_loose"],
+            "2017": ["HLT_g140_loose"],
+            "2018": ["HLT_g140_loose"]
+        },
         "metadata": "data/metadata.txt",
-        "flatmass": "data/flatmass_cuts_pt200to500_m40to150.csv",
-        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p30", "FlatMassQCDEff_0p37",
+        "flatmass": "data/Xbb_lookup_table_ftop0_250pT500yj_21May2025.json",
+        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p3", "FlatMassQCDEff_0p37",
                 "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
                 "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],
 

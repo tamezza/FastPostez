@@ -3,25 +3,33 @@
 #include <vector>
 #include <string>
 #include <map>
-
+#include <ROOT/RDataFrame.hxx>
+#include <nlohmann/json.hpp>
 
 
 class GN2XHandler {
-  struct GN2XCut {
-    double min_mass;
-    double max_mass;
-    double cut;
+  struct FlatMass {
+    std::vector<int> mass;
+    std::vector<float> cutvalues;
   };
+  typedef std::pair<std::vector<int>, std::vector<FlatMass>> MassPtCuts;
 
   private:
-    std::map<std::string, std::vector<GN2XCut>> all_cuts_;
+    std::map<std::string, MassPtCuts> all_cuts_;
   public:
     explicit GN2XHandler(const std::string& wps_cuts_filename);
-    std::string make_selection_code(const std::string& wp_name,
-                                    const std::string& gn2x_var,
-                                    const std::string& mass_var);
-    std::vector<std::string> get_wps();
+    ROOT::RDF::RNode define_pass(ROOT::RDF::RNode df,
+                                 const std::string& dhbb,
+                                 const std::string& ljet_m,
+                                 const std::string& ljet_pt);
 
   private:
-    void load_flatmass_cuts_CSV(const std::string& filename);
+    void load_flatmass_cuts(const std::string& xbb_file_name,
+                            const std::string& tagger,
+                            const std::string& large_jet);
+    MassPtCuts get_mass_pt_cuts(nlohmann::json j);
+    FlatMass get_flat_mass(nlohmann::json j);
+    float get_cut(const MassPtCuts& cuts, float mass, float pt);
+    int find_pt_bin(const std::vector<int>& bin_edges, float pt);
+    int find_mass_bin(const std::vector<int>& bin_edges, float mass);
 };

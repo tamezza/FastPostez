@@ -73,33 +73,19 @@ namespace xbbycalib {
     select_Z_candidate();
     get_dhbb();
     GN2XHandler gn2x_handler_(config_.analysis.flatmass);
+    df_ = gn2x_handler_.define_pass(df_.value(), "zcand_gn2x_ftop0", "zcand_m", "zcand_pt");
 
-    for (const auto& wp : config_.analysis.wps) {
-      auto dhbb_selection_code = gn2x_handler_.make_selection_code(wp, "zcand_gn2x", "zcand_m");
-      std::string pass_dhbb = "pass_dhbb_" + wp;
-      df_ = df_.value().Define(pass_dhbb, dhbb_selection_code);
-    }
     const std::string output_file_name = output_folder_ + "/histograms/hists_"
                                                         + std::to_string(sample_label) + ".root";
 
-    if (sample_label >= 364542 && sample_label <= 364547) {
-      //df_ = df_.value().Filter("abs(generatorWeight_NOSYS) < 100");
-      df_ = df_.value().Redefine("total_weight", "total_weight * (1.0173 - 0.0006*zcand_m - 0.0004*zcand_pt)");
-      df_ = df_.value().Redefine("total_weight", "zcand_log_phbb <= 0.2 ? total_weight * (1.3576 - 0.0009*zcand_m + 0.2485*zcand_log_phbb) : total_weight");
-
-      /*std::unique_ptr<TFile> fit_file(TFile::Open("output_phbb_fit.root", "READ"));
-      auto fit_func = static_cast<TF1*>(fit_file->Get("func"));
-      auto get_phbb_fit = [&](double total_weight, float zcand_log_phbb) -> double {
-        return fit_func->Eval(zcand_log_phbb) * total_weight;
-      };
-      df_ = df_.value().Redefine("total_weight", get_phbb_fit, {"total_weight", "zcand_log_phbb"});*/
-    }
     save_histograms(output_file_name, "total_weight");
 
     const std::string output_ntuple_name = output_folder_ + "/ntuples/ntuples_"
                                                         + std::to_string(sample_label) + ".root";
 
-    std::vector<std::string> output_variables = {"zcand_m", "zcand_pt", "total_weight", "zcand_log_phbb", "zcand_log_phcc", "zcand_log_ptop", "zcand_log_pqcd"};
+    std::vector<std::string> output_variables = {"zcand_m", "zcand_pt", "total_weight",
+                                                 "zcand_log_phbb", "zcand_log_phcc", "zcand_log_ptop", "zcand_log_pqcd",
+                                                 "zcand_phbb", "zcand_phcc", "zcand_ptop", "zcand_pqcd"};
     df_.value().Snapshot("tree", output_ntuple_name, output_variables);
   }
 
@@ -194,6 +180,9 @@ namespace xbbycalib {
              .Define("zcand_log_phcc", "-log(zcand_phcc)")
              .Define("zcand_log_ptop", "-log(zcand_ptop)")
              .Define("zcand_log_pqcd", "-log(zcand_pqcd)");
+
+
+    df_ = df_.value().Filter("ROOT::VecOps::Any(zcand_mask)");
   }
 
   void Analysis::get_dhbb()
@@ -240,9 +229,6 @@ namespace xbbycalib {
     auto h_phbb_zcand = df.Histo1D({"h_phbb_zcand", "-log(phbb);-log(phbb);Events", 20, 0, 0.2},
                                     "zcand_log_phbb", weight);
 
-    auto h_phbb_zcand_sidebands = df.Filter("zcand_m < 65 || zcand_m > 110").Histo1D({"h_phbb_zcand_sidebands", "-log(phbb);-log(phbb);Events", 20, 0, 0.2},
-                                    "zcand_log_phbb", weight);
-
     auto h_phcc_zcand = df.Histo1D({"h_phcc_zcand", "-log(phcc);-log(phcc);Events", 25, 0, 17},
                                     "zcand_log_phcc", weight);
 
@@ -254,20 +240,24 @@ namespace xbbycalib {
 
     auto h_m_phbb_zcand = df.Histo2D({"h_m_phbb_zcand", "Z candidate mass and p_{T}", 24, 40, 160, 24, 0, 0.48},
                                    "zcand_m", "zcand_log_phbb", weight);
+
+    auto h_pqcd_phbb_zcand = df.Histo2D({"h_pqcd_phbb_zcand", "Z candidate pqcd and phbb", 80, 0, 8, 90, 0, 9},
+                                   "zcand_log_pqcd", "zcand_log_phbb", weight);
+
     h_m_zcand->Write();
     h_pt_zcand->Write();
     h_m_pt_zcand->Write();
     h_phbb_zcand->Write();
-    h_phbb_zcand_sidebands->Write();
     h_phcc_zcand->Write();
     h_ptop_zcand->Write();
     h_pqcd_zcand->Write();
     h_gn2x->Write();
     h_gn2x_ftop0->Write();
     h_m_phbb_zcand->Write();
+    h_pqcd_phbb_zcand->Write();
 
     for (auto wp : config_.analysis.wps) {
-      std::string pass_dhbb = "pass_dhbb_" + wp;
+      std::string pass_dhbb = "pass_" + wp;
       std::string histo_name = "h_m_zcand_cut_" + wp;
       std::string histo_name_phbb = "h_phbb_zcand_cut_" + wp;
       std::string histo_name_phcc = "h_phcc_zcand_cut_" + wp;
