@@ -14,6 +14,8 @@ namespace xbbycalib {
       int n_threads_;
       config::Config config_;
       std::optional<ROOT::RDF::RNode> df_;
+      std::vector<std::pair<std::string, double>> cutflow_;
+      std::vector<std::pair<std::string, double>> cutflow_unweighted_;
 
     public:
       Analysis(const config::Config& config,
@@ -24,6 +26,7 @@ namespace xbbycalib {
 
     private:
       void run_sample(int sample_label, bool is_data);
+      void update_cutflow(std::string label);
       void apply_triggers();
       void define_physics_variables();
       void select_Z_candidate();
@@ -31,6 +34,6 @@ namespace xbbycalib {
       std::string create_dhbb_selection_code(const std::string& csv_file,
                                              const std::string& wp_name,
                                              const std::string& gn2x_var);
-      void save_histograms(const std::string& output_file_name, const std::string& weight);
+      void save_histograms(const std::string& output_file_name, const std::string& weight, std::string selection="true");
   };
 }

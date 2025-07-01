@@ -47,10 +47,10 @@ namespace weights {
     return (it != map_sx.end()) ? it->second : -1.0;
   }
 
-  double get_sum_w(const std::vector<std::string>& input_files)
+  std::map<unsigned int, double> get_sum_w(const std::vector<std::string>& input_files)
   {
-    TH1F* merged_hist = nullptr;
-    std::regex pattern("^CutBookkeeper_.*_.*_NOSYS$");
+    std::regex pattern(R"(^CutBookkeeper_.*_(\d+)_NOSYS$)");
+    std::map<unsigned int, double> year_sum;
 
     for (const auto& file_path : input_files) {
       auto root_file = TFile::Open(file_path.c_str(), "READ");
@@ -62,15 +62,30 @@ namespace weights {
 
       TIter next(root_file->GetListOfKeys());
       TKey* key;
-      while (key = static_cast<TKey*>(next())) {
+      while ((key = static_cast<TKey*>(next()))) {
         TObject* obj = key->ReadObj();
         auto hist = dynamic_cast<TH1F*>(obj);
-        if (hist && std::regex_match(hist->GetName(), pattern)) {
-          if (!merged_hist) {
-            merged_hist = static_cast<TH1F*>(hist->Clone("MergedHistogram"));
-            merged_hist->SetDirectory(nullptr); // Detach from file
-          } else {
-            merged_hist->Add(hist);
+        if (!hist) continue;
+
+        const std::string name(hist->GetName());
+        std::smatch match;
+        if (std::regex_match(name, match, pattern) && match.size() > 1) {
+          int run_number = std::stoi(match[1].str());
+          double content = hist->GetBinContent(2);
+
+          if (run_number == 310000) {
+            year_sum[2018] += content;
+          }
+          else if (run_number == 300000) {
+            year_sum[2017] += content;
+          }
+          else if (run_number == 284500) {
+            year_sum[2016] += content;
+            year_sum[2015] += content;
+          }
+          else {
+            std::cerr << "Warning: Unrecognized run number " << run_number << " in " << name << std::endl;
+            continue;
           }
         }
       }
@@ -79,7 +94,7 @@ namespace weights {
       delete root_file;
     }
 
-    return merged_hist->GetBinContent(2);
+    return year_sum;
   }
 
   std::vector<std::string> checkWeights(ROOT::RDF::RNode df)
@@ -100,19 +115,22 @@ namespace weights {
     return listWeights;
   }
 
-  std::string getWeightExpr(double xcross, double sumWeights, std::string period, ROOT::RDF::RNode df)
+  double get_lumi(unsigned int year)
   {
     // https://twiki.cern.ch/twiki/bin/view/Atlas/LuminosityForPhysics#2015_2018_13_TeV_proton_proton_f
-    const std::unordered_map<std::string, double> lumiMap = {
-      {"run2", 140068.94},
-      {"r16167", 3244.54 + 33402.2},
-      {"r13144", 44630.6},
-      {"r14145", 58791.6}
+    const std::unordered_map<int, double> lumiMap = {
+      {2015, 3244.54 + 33402.2},
+      {2016, 3244.54 + 33402.2},
+      {2017, 44630.6},
+      {2018, 58791.6}
     };
 
-    auto it = lumiMap.find(period);
-    double lumi = (it != lumiMap.end()) ? it->second : 0.0;
+    auto it = lumiMap.find(year);
+    return (it != lumiMap.end()) ? it->second : 0.0;
+  }
 
+  std::string getWeightExpr(ROOT::RDF::RNode df)
+  {
     auto weights = checkWeights(df);
     std::string weightPileup = weights[0];
     std::string weightBeamspot = weights[1];
@@ -120,9 +138,7 @@ namespace weights {
     std::string weightPhotonSF = weights[3];
 
     std::string total_weight = "generatorWeight_NOSYS * " + weightPileup + " * " + weightBeamspot + " * " +
-      weightLeptonSF + " * " + weightPhotonSF + " * " +
-      std::to_string(lumi) + " * " + std::to_string(xcross) + " / " +
-      std::to_string(sumWeights);
+      weightLeptonSF + " * " + weightPhotonSF + " * xsec * lumi / sum_weights";
     spdlog::info("Weight expression: {}", total_weight);
     return total_weight;
   }
@@ -132,10 +148,15 @@ namespace weights {
   {
     if (is_data) return df.Define("total_weight", "1");
 
-    const double cross_section = weights::get_xcross(sample_label, metadata);
-    const double sum_weights = weights::get_sum_w(input_files);
-    const std::string weight_expr = weights::getWeightExpr(cross_section, sum_weights, "run2", df);
+    const double cross_section = get_xcross(sample_label, metadata);
+    const auto sum_weights = get_sum_w(input_files);
 
-    return df.Define("total_weight", weight_expr);
+    auto sum_weights_year = [sum_weights](unsigned int year) {return sum_weights.at(year);};
+
+    df = df.Define("xsec", std::to_string(cross_section))
+           .Define("sum_weights", sum_weights_year, {"dataTakingYear"})
+           .Define("lumi", get_lumi, {"dataTakingYear"});
+
+    return df.Define("total_weight", getWeightExpr(df));
   }
 }

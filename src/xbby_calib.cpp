@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <cstdio>
 #include <map>
+#include <utility>
 #include <algorithm>
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RDFHelpers.hxx>
@@ -68,6 +69,7 @@ namespace xbbycalib {
     ROOT::RDF::Experimental::AddProgressBar(df);
     df_ = df;
 
+    update_cutflow("Initial");
     apply_triggers();
     define_physics_variables();
     select_Z_candidate();
@@ -76,17 +78,42 @@ namespace xbbycalib {
     df_ = gn2x_handler_.define_pass(df_.value(), "zcand_gn2x_ftop0", "zcand_m", "zcand_pt");
 
     const std::string output_file_name = output_folder_ + "/histograms/hists_"
-                                                        + std::to_string(sample_label) + ".root";
+                                                        + std::to_string(sample_label);
 
-    save_histograms(output_file_name, "total_weight");
+    const std::string output_file_name_full = output_file_name + ".root";
+    const std::string output_file_name_mc20a = output_file_name + "_mc20a.root";
+    const std::string output_file_name_mc20d = output_file_name + "_mc20d.root";
+    const std::string output_file_name_mc20e = output_file_name + "_mc20e.root";
+
+    save_histograms(output_file_name_full, "total_weight");
+    if (!is_data) {
+      save_histograms(output_file_name_mc20a, "total_weight", "dataTakingYear == 2015 || dataTakingYear == 2016");
+      save_histograms(output_file_name_mc20d, "total_weight", "dataTakingYear == 2017");
+      save_histograms(output_file_name_mc20e, "total_weight", "dataTakingYear == 2018");
+    }
 
     const std::string output_ntuple_name = output_folder_ + "/ntuples/ntuples_"
                                                         + std::to_string(sample_label) + ".root";
 
-    std::vector<std::string> output_variables = {"zcand_m", "zcand_pt", "total_weight",
+    std::vector<std::string> output_variables = {"zcand_m", "zcand_pt", "ph_pt", "ph_eta", "ph_phi",
+                                                 "total_weight", "eventNumber",
                                                  "zcand_log_phbb", "zcand_log_phcc", "zcand_log_ptop", "zcand_log_pqcd",
-                                                 "zcand_phbb", "zcand_phcc", "zcand_ptop", "zcand_pqcd"};
+                                                 "zcand_phbb", "zcand_phcc", "zcand_ptop", "zcand_pqcd",
+                                                 "dataTakingYear"};
+    if (!is_data) {
+      output_variables.insert(output_variables.end(), {"sum_weights", "lumi", "xsec", "PileupWeight_NOSYS", "beamSpotWeight", "generatorWeight_NOSYS"});
+    }
     df_.value().Snapshot("tree", output_ntuple_name, output_variables);
+  }
+
+  void Analysis::update_cutflow(std::string label)
+  {
+    auto sum_weights = df_.value().Sum("total_weight");
+    auto n_entries = df_.value().Count();
+    std::pair<std::string, double> cut (label, sum_weights.GetValue());
+    std::pair<std::string, double> cut_unweighted (label, n_entries.GetValue());
+    cutflow_.emplace_back(cut);
+    cutflow_unweighted_.emplace_back(cut_unweighted);
   }
 
   void Analysis::apply_triggers()
@@ -111,6 +138,8 @@ namespace xbbycalib {
 
     spdlog::info("Appplying trigger selection : {}", trigger_expr);
     df_ = df_.value().Filter(trigger_expr);
+
+    update_cutflow("Triggers");
   }
 
   void Analysis::define_physics_variables()
@@ -142,7 +171,7 @@ namespace xbbycalib {
   void Analysis::select_Z_candidate()
   {
     // Mass and pt selection
-    auto zcand_m_pt_mask = [&](const ROOT::RVecF& ljet_m, const ROOT::RVecF& ljet_pt) -> ROOT::RVecB {
+    auto zcand_m_pt_cut = [&](float ljet_m, float ljet_pt) -> bool {
         return ljet_m  > config_.analysis.min_mass &&
                ljet_m  < config_.analysis.max_mass &&
                ljet_pt > config_.analysis.min_pt &&
@@ -150,39 +179,44 @@ namespace xbbycalib {
     };
 
     // Delta phi selection
-    auto zcand_dphi_mask = [&](const ROOT::RVecF& ljet_phi, float ph_phi) -> ROOT::RVecB {
-        return ROOT::VecOps::Map(ljet_phi, [ph_phi](float phi) {
-            float dphi = std::abs(phi - ph_phi);
-            return dphi > M_PI ? 2 * M_PI - dphi : dphi;
-        }) > config_.analysis.min_dphi;
+    auto zcand_dphi_cut = [&](float ljet_phi, float ph_phi) -> bool {
+        float dphi = std::abs(ljet_phi - ph_phi);
+        dphi = dphi > M_PI ? 2 * M_PI - dphi : dphi;
+        return dphi > config_.analysis.min_dphi;
     };
 
     //Photon
     df_ = df_.value()
              .Filter("ph_baselineSelection_Tight_FixedCutTight_NOSYS[0]")
-             .Filter("ph_passesOR_NOSYS[0]")
+             .Filter("ph_passesOR_NOSYS[0]");
+    update_cutflow("Photon ISO and ID");
+
+    df_ = df_.value()
              .Filter("ph_pt > 175");
+
+    update_cutflow("Photon pT cut");
 
     // Apply selection masks and define Z candidate variables
     df_ = df_.value()
-             .Define("zcand_m_pt_mask", zcand_m_pt_mask, {"ljet_m", "ljet_pt"})
-             .Define("zcand_dphi_mask", zcand_dphi_mask, {"ljet_phi", "ph_phi"})
-             .Define("zcand_mask", "zcand_m_pt_mask && zcand_dphi_mask")
-             .Define("zcand_m", "ljet_m[zcand_mask][0]")
-             .Define("zcand_pt", "ljet_pt[zcand_mask][0]")
-             .Define("zcand_phi", "ljet_phi[zcand_mask][0]")
-             .Define("zcand_eta", "ljet_eta[zcand_mask][0]")
-             .Define("zcand_phbb", "ljet_phbb[zcand_mask][0]")
-             .Define("zcand_phcc", "ljet_phcc[zcand_mask][0]")
-             .Define("zcand_ptop", "ljet_ptop[zcand_mask][0]")
-             .Define("zcand_pqcd", "ljet_pqcd[zcand_mask][0]")
+             .Define("zcand_m", "ljet_m[0]")
+             .Define("zcand_pt", "ljet_pt[0]")
+             .Define("zcand_phi", "ljet_phi[0]")
+             .Define("zcand_eta", "ljet_eta[0]")
+             .Define("zcand_phbb", "ljet_phbb[0]")
+             .Define("zcand_phcc", "ljet_phcc[0]")
+             .Define("zcand_ptop", "ljet_ptop[0]")
+             .Define("zcand_pqcd", "ljet_pqcd[0]");
+
+    df_ = df_.value().Filter(zcand_m_pt_cut, {"zcand_m", "zcand_pt"});
+    update_cutflow("Z boson mass and pT selection");
+    df_ = df_.value().Filter(zcand_dphi_cut, {"zcand_phi", "ph_phi"});
+    update_cutflow("Delta(Z, photon) cut");
+
+    df_ = df_.value()
              .Define("zcand_log_phbb", "-log(zcand_phbb)")
              .Define("zcand_log_phcc", "-log(zcand_phcc)")
              .Define("zcand_log_ptop", "-log(zcand_ptop)")
              .Define("zcand_log_pqcd", "-log(zcand_pqcd)");
-
-
-    df_ = df_.value().Filter("ROOT::VecOps::Any(zcand_mask)");
   }
 
   void Analysis::get_dhbb()
@@ -205,7 +239,7 @@ namespace xbbycalib {
                     {"zcand_phbb", "zcand_phcc", "zcand_ptop", "zcand_pqcd"});
   }
 
-  void Analysis::save_histograms(const std::string& output_file_name, const std::string& weight)
+  void Analysis::save_histograms(const std::string& output_file_name, const std::string& weight, std::string selection)
   {
     std::unique_ptr<TFile> outFile(TFile::Open(output_file_name.c_str(), "RECREATE"));
     if (!outFile || outFile->IsZombie()) {
@@ -214,7 +248,7 @@ namespace xbbycalib {
 
     spdlog::info("Creating and saving histograms to {}", output_file_name);
 
-    auto& df = df_.value();
+    auto df = df_.value().Filter(selection);
     auto h_m_zcand = df.Histo1D({"h_m_zcand", "Z candidate mass;m [GeV];Events", 24, 40, 160},
                                   "zcand_m", weight);
     auto h_pt_zcand = df.Histo1D({"h_pt_zcand", "Z candidate p_{T};m [GeV];Events", 25, 200, 500},
@@ -275,6 +309,19 @@ namespace xbbycalib {
       h_ptop_zcand_cut->Write();
       h_pqcd_zcand_cut->Write();
     }
+
+    int n_cuts = cutflow_.size();
+    auto h_cutflow = new TH1D("h_cutflow", "Cutflow Histogram;Cut;Weighted Events", n_cuts, 0, n_cuts);
+    auto h_cutflow_unweighted = new TH1D("h_cutflow_unweighted", "Cutflow Histogram;Cut;Unweighted Events", n_cuts, 0, n_cuts);
+
+    for (int i = 0; i < n_cuts; ++i) {
+        h_cutflow->SetBinContent(i + 1, cutflow_[i].second);
+        h_cutflow_unweighted->SetBinContent(i + 1, cutflow_unweighted_[i].second);
+        h_cutflow->GetXaxis()->SetBinLabel(i + 1, cutflow_[i].first.c_str());
+        h_cutflow_unweighted->GetXaxis()->SetBinLabel(i + 1, cutflow_[i].first.c_str());
+    }
+    h_cutflow->Write();
+    h_cutflow_unweighted->Write();
 
     spdlog::info("Successfully wrote histograms to output file");
   }
