@@ -248,7 +248,7 @@ namespace xbbycalib {
 
     spdlog::info("Creating and saving histograms to {}", output_file_name);
 
-    auto df = df_.value().Filter(selection);
+    auto df = df_.value().Filter(selection).Filter(weight + " < 1e5");
     auto h_m_zcand = df.Histo1D({"h_m_zcand", "Z candidate mass;m [GeV];Events", 24, 40, 160},
                                   "zcand_m", weight);
     auto h_pt_zcand = df.Histo1D({"h_pt_zcand", "Z candidate p_{T};m [GeV];Events", 25, 200, 500},
