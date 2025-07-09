@@ -14,6 +14,11 @@
                      "HLT_j460_a10t_lcw_jes_L1SC111", "HLT_j460_a10t_lcw_jes_L1J100"]
         },
         "metadata": "data/metadata.txt",
+        "flatmass": "data/Xbb_lookup_table_prelim_Oct30_2024.json",
+        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p3", "FlatMassQCDEff_0p37",
+                "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
+                "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],
+
         "analysis": "zbbj"
     }
 }

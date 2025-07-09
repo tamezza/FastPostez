@@ -22,6 +22,10 @@ class GN2XHandler {
                                  const std::string& dhbb,
                                  const std::string& ljet_m,
                                  const std::string& ljet_pt);
+    ROOT::RDF::RNode define_pass_rvec(ROOT::RDF::RNode df,
+                                      const std::string& dhbb,
+                                      const std::string& ljet_m,
+                                      const std::string& ljet_pt);
 
   private:
     void load_flatmass_cuts(const std::string& xbb_file_name,

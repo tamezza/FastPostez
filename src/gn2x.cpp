@@ -141,7 +141,34 @@ ROOT::RDF::RNode GN2XHandler::define_pass(ROOT::RDF::RNode df, const std::string
       bool pass_dhbb = dhbb > cut_value;
       return pass_dhbb;
     };
-    df = df.Define("pass_" + wp, apply_cut, {dhbb, ljet_m, ljet_pt});
+    df = df.Define(new_col_name, apply_cut, {dhbb, ljet_m, ljet_pt});
   }
-  return df;
+	return df;
+}
+
+ROOT::RDF::RNode GN2XHandler::define_pass_rvec(ROOT::RDF::RNode df, const std::string& dhbb, const std::string& ljet_m, const std::string& ljet_pt)
+{
+	const float scale_factor = 1.0;
+	for (const auto& [wp, cuts] : all_cuts_) {
+		std::string new_col_name = "pass_" + wp;
+
+		auto apply_cut_vectorized = [this, &cuts, scale_factor](
+				const ROOT::RVec<float>& dhbb_vec,
+				const ROOT::RVec<float>& ljet_m_vec,
+				const ROOT::RVec<float>& ljet_pt_vec)
+		{
+			size_t n_elements = dhbb_vec.size();
+			ROOT::RVec<bool> pass_flags(n_elements);
+
+			for (size_t i = 0; i < n_elements; ++i) {
+				float scaled_m = ljet_m_vec[i] * scale_factor;
+				float scaled_pt = ljet_pt_vec[i] * scale_factor;
+				float cut_value = this->get_cut(cuts, scaled_m, scaled_pt);
+				pass_flags[i] = (dhbb_vec[i] > cut_value);
+			}
+			return pass_flags;
+		};
+		df = df.Define(new_col_name, apply_cut_vectorized, {dhbb, ljet_m, ljet_pt});
+	}
+	return df;
 }

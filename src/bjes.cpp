@@ -72,6 +72,8 @@ namespace bjes {
     update_cutflow("Initial");
     apply_triggers();
     define_physics_variables(is_data);
+    GN2XHandler gn2x_handler_(config_.analysis.flatmass);
+    df_ = gn2x_handler_.define_pass_rvec(df_.value(), "dhbb", "ljet_m", "ljet_pt");
 
     const std::string output_file_name = output_folder_ + "/histograms/hists_"
                                                         + std::to_string(sample_label);
@@ -89,6 +91,12 @@ namespace bjes {
                                                  "ljet_bJR10v00_mass", "ljet_bJR10v00_pt",
                                                  "ljet_bJR10v01_mass", "ljet_bJR10v01_pt",
                                                  "dhbb", "n_jets"};
+
+    for (auto wp : config_.analysis.wps) {
+      std::string pass_dhbb = "pass_" + wp;
+      output_variables.emplace_back(pass_dhbb);
+    }
+
 
     if (!is_data) {
       output_variables.insert(output_variables.end(), {"ljet_truth_label", "jet_parton_truth_label", "jet_eff_jvt"});

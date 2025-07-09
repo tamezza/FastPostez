@@ -14,6 +14,8 @@ namespace config_bjes {
       std::vector<int> years;
       std::map<int, std::vector<std::string>> trigger_map;
       std::string metadata;
+      std::string flatmass;
+      std::vector<std::string> wps;
       std::string analysis;
     } analysis;
   };

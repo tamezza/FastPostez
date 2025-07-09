@@ -32,6 +32,8 @@ config_bjes::Config config_bjes::load_config(const std::string& config_file_name
       config.analysis.trigger_map[year] = triggers.get<std::vector<std::string>>();
     }
     config.analysis.metadata    = j.at("analysis").at("metadata").get<std::string>();
+    config.analysis.flatmass    = j.at("analysis").at("flatmass").get<std::string>();
+    config.analysis.wps         = j.at("analysis").at("wps").get<std::vector<std::string>>();
     config.analysis.analysis    = j.at("analysis").at("analysis").get<std::string>();
 
   } catch (const nlohmann::json::out_of_range& e) {
