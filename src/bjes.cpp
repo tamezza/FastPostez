@@ -90,7 +90,7 @@ namespace bjes {
                                                  "jet_pt", "jet_eta", "jet_phi", "jet_m", "jet_e", "jet_jvt",
                                                  "ljet_bJR10v00_mass", "ljet_bJR10v00_pt",
                                                  "ljet_bJR10v01_mass", "ljet_bJR10v01_pt",
-                                                 "dhbb", "n_jets"};
+                                                 "dhbb", "n_jets", "total_weight"};
 
     for (auto wp : config_.analysis.wps) {
       std::string pass_dhbb = "pass_" + wp;
@@ -103,9 +103,9 @@ namespace bjes {
     }
 
     if (config_.analysis.analysis == "zbby") {
-      output_variables.insert(output_variables.end(), {"ph_pt", "ph_eta", "ph_phi", "met_met", "met_phi"});
+      output_variables.insert(output_variables.end(), {"ph_pt", "ph_eta", "ph_phi", "ph_e", "met_met", "met_phi"});
     }
-    df_.value().Snapshot("tree", output_ntuple_name, output_variables);
+    df_.value().Snapshot("nominal", output_ntuple_name, output_variables);
   }
 
   void Analysis::update_cutflow(std::string label)
@@ -225,5 +225,11 @@ namespace bjes {
              .Define("ljet_e", get_energy, {"ljet_pt", "ljet_eta", "ljet_m"})
              .Define("dhbb", get_dhbb, {"ljet_phbb", "ljet_phcc", "ljet_ptop", "ljet_pqcd"})
              .Define("jet_e", get_energy, {"jet_pt", "jet_eta", "jet_m"});
+
+    if (config_.analysis.analysis == "zbby") {
+      df_ = df_.value()
+               .Define("ph_m", "0")
+               .Define("ph_e", get_energy, {"ph_pt", "ph_eta", "ph_m"});
+    }
   }
 }
