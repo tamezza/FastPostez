@@ -114,6 +114,8 @@ namespace xbbycalib {
     std::pair<std::string, double> cut_unweighted (label, n_entries.GetValue());
     cutflow_.emplace_back(cut);
     cutflow_unweighted_.emplace_back(cut_unweighted);
+    spdlog::info("Cut: {}", label);
+    spdlog::info("Number of events: {}", sum_weights.GetValue());
   }
 
   void Analysis::apply_triggers()

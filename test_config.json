@@ -3,8 +3,8 @@
         "tree_name": "AnalysisMiniTree"
     },
     "analysis": {
-        "dsids": [700855],
-        "years": [],
+        "dsids": [364542],
+        "years": [15, 16, 17, 18],
         "trigger_map": {
             "2015": ["HLT_g120_loose"],
             "2016": ["HLT_g140_loose"],

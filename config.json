@@ -3,7 +3,7 @@
         "tree_name": "AnalysisMiniTree"
     },
     "analysis": {
-        "dsids": [364542,364543,364544,364545,364546,364547,500800,504554,700352,700353,700507,700849,700855],
+        "dsids": [364542,364543,364544,364545,364546,364547,500800,504554,700352,700353,700507,700849],
         "years": [15, 16, 17, 18],
         "trigger_map": {
             "2015": ["HLT_g120_loose"],
@@ -12,7 +12,7 @@
             "2018": ["HLT_g140_loose"]
         },
         "metadata": "data/metadata.txt",
-        "flatmass": "data/Xbb_lookup_table_prelim_Oct30_2024.json",
+        "flatmass": "data/Xbb_lookup_table_ftop0_250pT500yj_21May2025.json",
         "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p3", "FlatMassQCDEff_0p37",
                 "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
                 "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],

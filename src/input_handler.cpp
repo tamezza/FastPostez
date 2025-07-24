@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <regex>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <iterator>
 #include <spdlog/spdlog.h>
@@ -95,7 +96,43 @@ void InputHandler::create_merged_file(const std::string& folder, const std::vect
   ROOT::RDataFrame df(*chain_ptr);
   spdlog::info("Merging input files...");
   auto df_weighted = weights::define_event_weights(df, metadata_, sample_label_, all_input_files_, is_data_);
-  df_weighted.Snapshot(tree_name_, input_folder_ + "/" + folder + "/" + merged_file_name_);
+
+  std::vector<std::string> nominal_vars = {"RandomLumiBlockNumber", "RandomRunNumber",
+                                           "actualInteractionsPerCrossing", "averageInteractionsPerCrossing",
+                                           "beamSpotWeight", "dataTakingYear", "eventNumber", "lumiBlock",
+                                           "mcChannelNumber", "nPrimaryVertices", "runNumber",
+                                           "total_weight", "lumi", "sum_weights", "xsec"};
+
+  auto df_cols = df_weighted.GetColumnNames();
+  std::set<std::string> columns(df_cols.begin(), df_cols.end());
+  nominal_vars.erase(
+    std::remove_if(
+      nominal_vars.begin(),
+      nominal_vars.end(),
+      [&](const std::string& col) { return columns.find(col) == columns.end(); }
+    ),
+    nominal_vars.end()
+  );
+
+  auto endswith = [](const std::string& str, const std::string& suffix) -> bool {
+    return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+  };
+  auto startswith = [](const std::string& str, const std::string& prefix) -> bool {
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+  };
+  for (const auto& col : columns) {
+    if (std::find(nominal_vars.begin(), nominal_vars.end(), col) == nominal_vars.end()) {
+      if (endswith(col, "_NOSYS") || startswith(col, "trig")) {
+        nominal_vars.push_back(col);
+      }
+    }
+  }
+
+  /*spdlog::info("Keeping columns:");
+  for (const auto& col : nominal_vars) {
+    spdlog::info(col);
+  }*/
+  df_weighted.Snapshot(tree_name_, input_folder_ + "/" + folder + "/" + merged_file_name_, nominal_vars);
 }
 
 std::unique_ptr<TChain> InputHandler::create_safe_chain(const std::vector<std::string>& files)
