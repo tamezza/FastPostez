@@ -42,14 +42,21 @@ merge_sample() {
     fi
 }
 
-merge_sample "Zqqy_MG" 364418-364422
-merge_sample "gamma_jets_sherpa" 364542-364547
-merge_sample "tty" 500800 504554
-merge_sample "Zqqy" 700352
-merge_sample "Zbby" 700353
-merge_sample "Wqqy" 700507
-merge_sample "gamma_jets_pythia" 800660-800683
+#merge_sample "multijets_sherpa" 364686-364694
+merge_sample "multijets_801165" 801165
+merge_sample "multijets_801166" 801166
+merge_sample "multijets_801167" 801167
+merge_sample "multijets_801168" 801168
+merge_sample "multijets_801169" 801169
+merge_sample "multijets_801170" 801170
+merge_sample "multijets_801171" 801171
+merge_sample "multijets_801172" 801172
+merge_sample "multijets_801173" 801173
+#merge_sample "top" 410470 410471 410644 410645 410658 410659
+#merge_sample "WqqJets" 700843
+merge_sample "ZbbJets" 700855
+#merge_sample "ZqqJets" 700849
 
-hadd "$output_dir"/data.root "$input_dir"/ntuples/ntuples_1[5-8].root
 
-
+###hadd "$output_dir"/data.root "$input_dir"/ntuples/ntuples_1[5-8].root
+hadd "$output_dir"/data.root "$input_dir"/ntuples/ntuples_2[2-4].root

@@ -1,0 +1,24 @@
+{
+    "ntuple": {
+        "tree_name": "AnalysisMiniTree"
+    },
+    "analysis": {
+        "dsids": [700855,364686,364687,364688,364689,364690,364691,364692,364693,364694,364700,364701,364702,364703,364704,364705,364706,364707,364708,364709,364710,364711,364712],
+        "years": [15, 16, 17, 18],
+        "trigger_map": {
+            "2015": ["HLT_j360_a10_lcw_sub_L1J100"],
+            "2016": ["HLT_j420_a10_lcw_L1J100", "HLT_j420_a10r_L1J100"],
+            "2017": ["HLT_j420_a10t_lcw_jes_40smcINF_L1J100", "HLT_j390_a10t_lcw_jes_30smcINF_L1J100", "HLT_j460_a10t_lcw_jes_L1J100"],
+            "2018": ["HLT_j420_a10t_lcw_jes_35smcINF_L1J100", "HLT_j390_a10t_lcw_jes_30smcINF_L1J100", "HLT_j420_a10t_lcw_jes_35smcINF_L1SC111",
+                     "HLT_j460_a10r_L1SC111", "HLT_j460_a10r_L1J100", "HLT_j460_a10_lcw_subjes_L1SC111", "HLT_j460_a10_lcw_subjes_L1J100",
+                     "HLT_j460_a10t_lcw_jes_L1SC111", "HLT_j460_a10t_lcw_jes_L1J100"]
+        },
+        "metadata": "data/metadata_mc20.txt",
+        "flatmass": "data/Xbb_lookup_table_prelim_Oct30_2024.json",
+        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p3", "FlatMassQCDEff_0p37",
+                "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
+                "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],
+
+        "analysis": "zbbj"
+    }
+}

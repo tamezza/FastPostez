@@ -17,6 +17,10 @@ Makefile
 *_C.d
 *_C_ACLiC_dict_rdict.pcm
 
+# ATLAS asetup
+.asetup.save
+*.asetup.save
+
 # Python
 __pycache__/
 *.pyc

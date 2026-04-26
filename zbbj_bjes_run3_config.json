@@ -1,0 +1,35 @@
+{
+    "ntuple": {
+        "tree_name": "AnalysisMiniTree"
+    },
+    "analysis": {
+        "dsids": [700855, 801165, 801166, 801167, 801168, 801169, 801170, 801171, 801172, 801173],
+        "years": [22, 23, 24],
+        "trigger_map": {
+            "2022": ["HLT_j420_35smcINF_a10sd_cssk_pf_jes_ftf_preselj225_L1J100", "HLT_2j330_35smcINF_a10sd_cssk_pf_jes_ftf_presel2j225_L1J100"],
+            "2023": ["HLT_j420_35smcINF_a10sd_cssk_pf_jes_ftf_preselj225_L1J100", 
+                     "HLT_2j330_35smcINF_a10sd_cssk_pf_jes_ftf_presel2j225_L1J100"],
+            "2024": ["HLT_j460_a10sd_cssk_pf_jes_ftf_preselj225_L1J100","HLT_j460_a10sd_cssk_pf_jes_ftf_preselj225_L1SC111_CJ15",
+                     "HLT_j460_a10t_lcw_jes_L1J100","HLT_j460_a10t_lcw_jes_L1SC111_CJ15",
+                     "HLT_j460_a10r_L1J100","HLT_j460_a10r_L1SC111_CJ15",
+                     "HLT_j460_a10_lcw_subjes_L1J100","HLT_j460_a10_lcw_subjes_L1SC111_CJ15",
+                     "HLT_j420_35smcINF_a10sd_cssk_pf_jes_ftf_preselj225_L1J100","HLT_j420_35smcINF_a10t_lcw_jes_L1J100",
+                     "HLT_j420_35smcINF_a10t_lcw_jes_L1SC111_CJ15","HLT_2j330_35smcINF_a10sd_cssk_pf_jes_ftf_presel2j225_L1J100",
+                     "HLT_2j330_35smcINF_a10t_lcw_jes_L1J100","HLT_j420_35smcINF_a10sd_cssk_pf_jes_ftf_preselj225_L1SC111_CjJ40",
+                     "HLT_j420_35smcINF_a10t_lcw_jes_L1SC111_CjJ40", "HLT_2j330_35smcINF_a10sd_cssk_pf_jes_ftf_presel2j225_L1SC111_CjJ40",
+                     "HLT_2j330_35smcINF_a10t_lcw_jes_L1SC111_CjJ4", "HLT_j420_35smcINF_a10sd_cssk_pf_jes_ftf_preselj225_L1jJ160",
+                     "HLT_j420_35smcINF_a10t_lcw_jes_L1jJ160", "HLT_2j330_35smcINF_a10sd_cssk_pf_jes_ftf_presel2j225_L1jJ160",
+                     "HLT_2j330_35smcINF_a10t_lcw_jes_L1jJ160", "HLT_j420_35smcINF_a10sd_cssk_pf_jes_ftf_preselj225_L1gLJ140p0ETA25",
+                     "HLT_j420_35smcINF_a10t_lcw_jes_L1gLJ140p0ETA25", "HLT_2j330_35smcINF_a10sd_cssk_pf_jes_ftf_presel2j225_L1gLJ140p0ETA25",
+                     "HLT_2j330_35smcINF_a10t_lcw_jes_L1gLJ140p0ETA25"]
+        },
+        "metadata": "data/metadata.txt",
+        "flatmass": "data/Xbb_lookup_table_prelim_Oct30_2024.json",
+        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p3", "FlatMassQCDEff_0p37",
+                "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
+                "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],
+
+        "analysis": "zbbj"
+    }
+}
+

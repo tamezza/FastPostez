@@ -27,12 +27,17 @@ list_dsid_mc20 = [700398,700399, # Zll+gamma
              500800,504554
              ]
 
-# Run 3 MC23 DSIDs (from your screenshot)
+# Run 3 MC23 DSIDs 
 list_dsid_mc23 = [700855,  # Z(→bb) + jets (Nominal signal) - Sherpa 2.2.14
                   700849,  # Z(→qq) + jets - Sherpa 2.2.14
                   700843,  # W(→qq) + jets - Sherpa 2.2.14
                   601237,  # Top - PhPy8EG_A14
-                  801165, 801166, 801167, 801168, 801169, 801170, 801171, 801172, 801173  # Multijets (Main background) - Pythia8EvtGen_A14
+                  801165, 801166, 801167, 801168, 801169, 801170, 801171, 801172, 801173,  # Multijets - Pythia8
+                  # --- zbby ---
+                  545023, 545024,          
+                  701286, 701287, 701288,  
+                  801663, 801664, 801665, 801666, 801667, 801668, 801669, 801670,
+                  801671, 801672, 801673, 801674, 801675, 801676  # Multijets zbby - Pythia8
                   ]
 
 
@@ -98,6 +103,14 @@ if __name__ == "__main__":
             rtag='r15224_r15225',  # Standard Run 3 rtag
             ptag='p7017',
             output_file=args.output_mc23
+        )
+
+        get_metadata(
+            dsid_list=[545023, 545024, 701286, 701287, 701288],
+            campaign='mc23_13p6TeV',
+            rtag='r15530',
+            ptag='p7017',
+            output_file='../data/metadata_zbby_signal.txt'
         )
 
 

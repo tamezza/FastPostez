@@ -122,7 +122,7 @@ void InputHandler::create_merged_file(const std::string& folder, const std::vect
   };
   for (const auto& col : columns) {
     if (std::find(nominal_vars.begin(), nominal_vars.end(), col) == nominal_vars.end()) {
-      if (endswith(col, "_NOSYS") || startswith(col, "trig")) {
+      if (endswith(col, "_NOSYS") || startswith(col, "trig") || startswith(col, "truthjet")) {
         nominal_vars.push_back(col);
       }
     }

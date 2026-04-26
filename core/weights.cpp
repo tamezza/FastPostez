@@ -132,8 +132,10 @@ namespace weights {
     // https://twiki.cern.ch/twiki/bin/view/Atlas/LuminosityForPhysics#2015_2018_13_TeV_proton_proton_f
     const std::unordered_map<int, double> lumiMap = {
       // Run-2: https://twiki.cern.ch/twiki/bin/view/AtlasProtected/GoodRunListsForAnalysisRun2
-      {2015, 3244.54 + 33402.2},
-      {2016, 3244.54 + 33402.2},
+      //{2015, 3244.54 + 33402.2},
+      //{2016, 3244.54 + 33402.2},
+      {2015, 3244.54},
+      {2016, 33402.2},
       {2017, 44630.6},
       {2018, 58791.6},
       // Run-3: https://twiki.cern.ch/twiki/bin/view/AtlasProtected/GoodRunListsForAnalysisRun3

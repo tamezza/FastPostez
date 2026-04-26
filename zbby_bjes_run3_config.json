@@ -1,0 +1,24 @@
+{
+    "ntuple": {
+        "tree_name": "AnalysisMiniTree"
+    },
+    "analysis": {
+        "dsids": [545023,545024,701286,701287,701288,801667,801668,801669,801670,801671,801672,801673,801674,801675,801676],
+        "years": [22, 23, 24],
+        "trigger_map": {
+            "2022": ["HLT_g140_loose_L1EM22VHI"],
+            "2023": ["HLT_g140_loose_L1EM22VHI",
+                     "HLT_g140_loose_L1eEM26M"],
+            "2024": ["HLT_g140_loose_L1eEM26M",
+                     "HLT_g140_loose_L1EM22VHI"]
+        },
+        "jet_jvt_branch": "recojet_antikt4PFlow_jvt_selection_NOSYS",
+        "metadata": "data/metadata_zbbx_run3.txt",
+        "flatmass": "data/Xbb_lookup_table_prelim_Oct30_2024.json",
+        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p3", "FlatMassQCDEff_0p37",
+                "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
+                "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],
+        "analysis": "zbby"
+    }
+}
+

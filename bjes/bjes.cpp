@@ -103,8 +103,16 @@ namespace bjes {
 
 
     if (!is_data) {
-      output_variables.insert(output_variables.end(), {"ljet_truth_label", "jet_parton_truth_label", "jet_eff_jvt"});
-    }
+      output_variables.insert(output_variables.end(), {
+      "ljet_truth_label", "jet_parton_truth_label", "jet_eff_jvt",
+      // --- NEW ---
+      "matched_tjet_pt", "matched_tjet_m",
+      "matched_tjet_eta", "matched_tjet_phi",
+      "matched_tjet_dR",
+      "ljet_n_bhadrons",
+      "ljet_n_chadrons"
+    });
+  }
 
     if (config_.analysis.analysis == "zbby") {
       output_variables.insert(output_variables.end(), {"ph_pt", "ph_eta", "ph_phi", "ph_e", "met_met", "met_phi"});
@@ -183,6 +191,12 @@ namespace bjes {
       ljet_prefix + "bJR10v00_pt_NOSYS"
     });
 
+    // JVT branch resolution:
+    auto jet_jvt_branch = get_branch_name("jet_jvt", {
+        jet_prefix + "jvt_selection_NOSYS",   // zbby
+        jet_prefix + "Jvt_NOSYS"              // zbbj
+    });
+
     std::vector<std::pair<std::string, std::string>> variables = {
       {"ljet_m", ljet_prefix + "m_NOSYS/1000"},
       {"ljet_pt", ljet_prefix + "pt_NOSYS/1000"},
@@ -193,7 +207,10 @@ namespace bjes {
       {"jet_pt", jet_prefix + "pt_NOSYS/1000"},
       {"jet_phi", jet_prefix + "phi_NOSYS"},
       {"jet_eta", jet_prefix + "eta_NOSYS"},
-      {"jet_jvt", jet_prefix + "Jvt_NOSYS"},
+      {"jet_jvt", jet_jvt_branch},
+      //{"recojet_antikt4PFlow_jvt_NOSYS", jet_jvt_branch},
+      //recojet_antikt4PFlow_jvt_selection_NOSYS in Zbby and recojet_antikt4PFlow_jvt_NOSYS in Zbbj
+      //{"jet_jvt", jet_prefix + "Jvt_NOSYS"}, 
 
       //{"ljet_bJR10v00_mass", ljet_prefix + "bJR10v00Ext_mass_NOSYS/1000"}, //bJR10v00Ext_mass_NOSYS or bJR10v00_mass_NOSYS
       //{"ljet_bJR10v01_mass", ljet_prefix + "bJR10v01_mass_NOSYS/1000"},
@@ -223,20 +240,97 @@ namespace bjes {
       {"met_phi", "met_phi_NOSYS"},
     };
 
-    std::vector<std::pair<std::string, std::string>> mc_variables = {
-      {"ljet_truth_label", ljet_prefix + "R10TruthLabel_R22v1_NOSYS"},
-      {"jet_parton_truth_label", jet_prefix + "PartonTruthLabelID_NOSYS"},
-      {"jet_eff_jvt", jet_prefix + "jvt_effSF_NOSYS"},
-    };
-
     for (const auto& [name, expr] : variables) {
       df_ = df_.value().Define(name, expr);
     }
 
     if (!is_data) {
+      // JVT EFF branch resolution, MC only:
+      auto jet_eff_jvt_branch = get_branch_name("jet_eff_jvt", {
+          jet_prefix + "jvt_effSF_NOSYS",
+          "jvt_effSF_NOSYS"
+      });
+      
+      std::vector<std::pair<std::string, std::string>> mc_variables = {
+        {"ljet_truth_label", ljet_prefix + "R10TruthLabel_R22v1_NOSYS"},
+        {"jet_parton_truth_label", jet_prefix + "PartonTruthLabelID_NOSYS"},
+        //{"jet_eff_jvt", jet_prefix + "jvt_effSF_NOSYS"},
+        {"jet_eff_jvt", jet_eff_jvt_branch},
+        {"ljet_n_bhadrons",     ljet_prefix + "GhostBHadronsFinalCount_NOSYS"},  
+        {"ljet_n_chadrons",     ljet_prefix + "GhostCHadronsFinalCount_NOSYS"},  
+      };
+
       for (const auto& [name, expr] : mc_variables) {
         df_ = df_.value().Define(name, expr);
       }
+      
+        const std::string tjet_prefix = "truthjet_antikt10SoftDrop_";
+
+    // alias raw truth branches to short names
+    /*df_ = df_.value()
+      .Alias("tjet_eta", "truthjet_antikt10SoftDrop_eta")
+      .Alias("tjet_phi", "truthjet_antikt10SoftDrop_phi")
+      .Define("tjet_pt", [](const ROOT::RVecF& v){ return v / 1000.f; }, {"truthjet_antikt10SoftDrop_pt"})
+      .Define("tjet_m",  [](const ROOT::RVecF& v){ return v / 1000.f; }, {"truthjet_antikt10SoftDrop_m"});
+    */
+    df_ = df_.value()
+      .Define("tjet_eta", "truthjet_antikt10SoftDrop_eta")
+      .Define("tjet_phi", "truthjet_antikt10SoftDrop_phi")
+      .Define("tjet_pt",  "truthjet_antikt10SoftDrop_pt/1000")
+      .Define("tjet_m",   "truthjet_antikt10SoftDrop_m/1000");
+
+    // ΔR matching: for each reco ljet, find the closest truth jet
+    auto get_matched = [](
+        const ROOT::RVecF& reco_eta,  const ROOT::RVecF& reco_phi,
+        const ROOT::RVecF& truth_eta, const ROOT::RVecF& truth_phi,
+        const ROOT::RVecF& truth_vals) -> ROOT::RVecF
+    {
+      ROOT::RVecF result(reco_eta.size(), -999.f);
+      for (size_t i = 0; i < reco_eta.size(); ++i) {
+        float min_dR = std::numeric_limits<float>::max();
+        int   best   = -1;
+        for (size_t j = 0; j < truth_eta.size(); ++j) {
+          float deta = reco_eta[i] - truth_eta[j];
+          float dphi = reco_phi[i] - truth_phi[j];
+          // wrap dphi into [-π, π]
+          while (dphi >  M_PI) dphi -= 2.f * M_PI;
+          while (dphi < -M_PI) dphi += 2.f * M_PI;
+          float dR = std::sqrt(deta*deta + dphi*dphi);
+          if (dR < min_dR) { min_dR = dR; best = j; }
+        }
+        if (best >= 0) result[i] = truth_vals[best];
+      }
+      return result;
+    };
+
+    // also store the minimum ΔR itself (useful for a matching quality cut later)
+    auto get_min_dR = [](
+        const ROOT::RVecF& reco_eta,  const ROOT::RVecF& reco_phi,
+        const ROOT::RVecF& truth_eta, const ROOT::RVecF& truth_phi) -> ROOT::RVecF
+    {
+      ROOT::RVecF result(reco_eta.size(), -999.f);
+      for (size_t i = 0; i < reco_eta.size(); ++i) {
+        float min_dR = std::numeric_limits<float>::max();
+        for (size_t j = 0; j < truth_eta.size(); ++j) {
+          float deta = reco_eta[i] - truth_eta[j];
+          float dphi = reco_phi[i] - truth_phi[j];
+          while (dphi >  M_PI) dphi -= 2.f * M_PI;
+          while (dphi < -M_PI) dphi += 2.f * M_PI;
+          float dR = std::sqrt(deta*deta + dphi*dphi);
+          if (dR < min_dR) min_dR = dR;
+        }
+        result[i] = (min_dR < std::numeric_limits<float>::max()) ? min_dR : -999.f;
+      }
+      return result;
+    };
+
+    df_ = df_.value()
+      .Define("matched_tjet_pt",  get_matched, {"ljet_eta", "ljet_phi", "tjet_eta", "tjet_phi", "tjet_pt"})
+      .Define("matched_tjet_m",   get_matched, {"ljet_eta", "ljet_phi", "tjet_eta", "tjet_phi", "tjet_m"})
+      .Define("matched_tjet_eta", get_matched, {"ljet_eta", "ljet_phi", "tjet_eta", "tjet_phi", "tjet_eta"})
+      .Define("matched_tjet_phi", get_matched, {"ljet_eta", "ljet_phi", "tjet_eta", "tjet_phi", "tjet_phi"})
+      .Define("matched_tjet_dR",  get_min_dR,  {"ljet_eta", "ljet_phi", "tjet_eta", "tjet_phi"});
+
     }
 
     if (config_.analysis.analysis == "zbby") {
@@ -266,7 +360,7 @@ namespace bjes {
 
     if (config_.analysis.analysis == "zbby") {
       df_ = df_.value()
-               .Define("ph_m", "0")
+               .Define("ph_m", [](const ROOT::RVecF& pt){ return ROOT::RVecF(pt.size(), 0.f); }, {"ph_pt"})
                .Define("ph_e", get_energy, {"ph_pt", "ph_eta", "ph_m"});
     }
   }

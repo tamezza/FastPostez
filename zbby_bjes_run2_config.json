@@ -1,0 +1,22 @@
+{
+    "ntuple": {
+        "tree_name": "AnalysisMiniTree"
+    },
+    "analysis": {
+        "dsids": [364418,364419,364420,364421,364422,364542,364543,364544,364545,364546,364547,500800,504554,700352,700353,700507,800660,800661,800662,800663,800664,800665,800666,800667,800668,800669,800670,800671,800672,800673,800674,800675,800676,800677,800678,800679,800680,800681,800682,800683],
+        "years": [15, 16, 17, 18],
+        "trigger_map": {
+            "2015": ["HLT_g120_loose"],
+            "2016": ["HLT_g140_loose"],
+            "2017": ["HLT_g140_loose"],
+            "2018": ["HLT_g140_loose"]
+        },
+        "metadata": "data/metadata_mc20.txt",
+        "flatmass": "data/Xbb_lookup_table_prelim_Oct30_2024.json",
+        "wps": ["FlatMassQCDEff_0p25", "FlatMassQCDEff_0p3", "FlatMassQCDEff_0p37",
+                "FlatMassQCDEff_0p46", "FlatMassQCDEff_0p58", "FlatMassQCDEff_0p74",
+                "FlatMassQCDEff_0p94", "FlatMassQCDEff_1p25", "FlatMassQCDEff_1p55"],
+        "analysis": "zbby"
+    }
+}
+
